@@ -18,7 +18,7 @@ from tenacity import (
 )
 
 from auto_nag import logger, utils
-from auto_nag.components import Components
+from auto_nag.components import ComponentName, Components
 from auto_nag.people import People
 from auto_nag.round_robin_calendar import BadFallback, Calendar, InvalidCalendar
 
@@ -90,9 +90,7 @@ class RoundRobin(object):
                     if component_name in data:
                         del data[component_name]
 
-    def get_component_calendar(
-        self, product: str, component: str
-    ) -> Optional[Calendar]:
+    def get_component_calendar(self, component: ComponentName) -> Optional[Calendar]:
         """Get the calendar for specific component.
 
         Args:
@@ -102,7 +100,7 @@ class RoundRobin(object):
         Returns:
             The calendar as defined in the round robin configs.
         """
-        pc = f"{product}::{component}"
+        pc = str(component)
         return self.data[pc] if pc in self.data else None
 
     def get_components(self):

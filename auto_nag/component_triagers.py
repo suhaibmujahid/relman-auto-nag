@@ -72,9 +72,7 @@ class ComponentTriagers:
             today based on the rotations source. If component does not have a
             rotation source, an empty list will be returned.
         """
-        calendar = self.round_robin.get_component_calendar(
-            component.product, component.name
-        )
+        calendar = self.round_robin.get_component_calendar(component)
         if not calendar:
             return []
 
