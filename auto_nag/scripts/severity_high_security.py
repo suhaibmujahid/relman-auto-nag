@@ -52,7 +52,7 @@ class SeverityHighSecurity(BzCleaner):
             "include_fields": fields,
             "resolution": "---",
             "f3": "keywords",
-            "o3": "anyexact",
+            "o3": "anywords",
             "v3": HIGH_SECURITY_KEYWORDS,
             "f4": "bug_severity",
             "o4": "anyexact",
