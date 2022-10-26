@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from typing import Optional, Tuple
+
 from libmozdata.bugzilla import Bugzilla
 
 from auto_nag import utils
@@ -79,6 +81,25 @@ class RegressionSetStatusFlags(BzCleaner):
 
         return data
 
+    @staticmethod
+    def _get_latest_status_flag(bug: dict) -> Tuple[Optional[int], Optional[str]]:
+        """Get the latest status flag from a bug.
+
+        Will ignore ESR versions.
+        """
+        firefox_versions = sorted(
+            (int(flag[len("cf_status_firefox") :]), status)
+            for flag, status in bug.items()
+            if flag.startswith("cf_status_firefox") and "esr" not in flag
+        )
+
+        if not firefox_versions:
+            return None, None
+
+        latest_version, status = firefox_versions[-1]
+
+        return latest_version, status
+
     def get_status_changes(self, bugs):
         bugids = {info["regressed_by"] for info in bugs.values()}
         if not bugids:
@@ -121,6 +142,13 @@ class RegressionSetStatusFlags(BzCleaner):
                 else None
             )
 
+            wontfix_version, status = self._get_latest_status_flag(info)
+            if status not in (
+                "wontfix",
+                "fix-optional",
+            ):
+                wontfix_version = None
+
             self.status_changes[bugid] = {}
             for channel in ("release", "beta", "central"):
                 v = int(self.versions[channel])
@@ -128,6 +156,10 @@ class RegressionSetStatusFlags(BzCleaner):
                 info[channel] = info[flag]
                 if info[flag] != "---":
                     # XXX maybe check for consistency?
+                    continue
+                if wontfix_version is not None and v >= wontfix_version:
+                    # Release managers marked the latest version as wontfix or
+                    # fix-optional, ignore setting flags for newer ones
                     continue
                 if fixed_version is not None and v >= fixed_version:
                     # Bug was fixed in an earlier version, don't set the flag
@@ -147,6 +179,10 @@ class RegressionSetStatusFlags(BzCleaner):
                 info["esr"][f"esr{v}"] = info[flag]
                 if info[flag] != "---":
                     # XXX maybe check for consistency?
+                    continue
+                if wontfix_version is not None and v >= wontfix_version:
+                    # Release managers marked the latest version as wontfix or
+                    # fix-optional, ignore setting flags for newer ones
                     continue
                 if fixed_version is not None and int(v) >= fixed_version:
                     # Bug was fixed in an earlier version, don't set the flag
