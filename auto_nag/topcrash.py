@@ -91,13 +91,13 @@ TOP_CRASH_IDENTIFICATION_CRITERIA = _format_criteria_names(
             "process_type": "rdd",
             "tc_limit": 5,
         },
-        {
-            "name": "RDD process crashes",
-            "product": "Firefox",
-            "channel": "release",
-            "process_type": "rdd",
-            "tc_limit": 5,
-        },
+        # {
+        #     "name": "RDD process crashes",
+        #     "product": "Firefox",
+        #     "channel": "release",
+        #     "process_type": "rdd",
+        #     "tc_limit": 5,
+        # },
         {
             "name": "socket and utility process crashes",
             "product": "Firefox",
