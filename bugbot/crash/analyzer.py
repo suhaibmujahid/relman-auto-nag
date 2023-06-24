@@ -13,6 +13,47 @@ from libmozdata import utils as lmdutils
 from bugbot.components import ComponentName
 from bugbot.crash import socorro_util
 
+# Crash address commonalities: crashes were near null, or were near allocator
+# poison values.
+OFFSET_64_BIT = 0x1000
+OFFSET_32_BIT = 0x100
+ALLOCATOR_ADDRESSES_64_BIT = (
+    0xE5E5E5E5E5E5E5E5,
+    0x4B4B4B4B4B4B4B4B,
+)
+ALLOCATOR_ADDRESSES_32_BIT = (
+    0xE5E5E5E5,
+    0x4B4B4B4B,
+)
+ALLOCATOR_RANGES_64_BIT = (
+    (addr - OFFSET_64_BIT, addr + OFFSET_64_BIT) for addr in ALLOCATOR_ADDRESSES_64_BIT
+)
+ALLOCATOR_RANGES_32_BIT = (
+    (addr - OFFSET_32_BIT, addr + OFFSET_32_BIT) for addr in ALLOCATOR_ADDRESSES_32_BIT
+)
+
+
+def is_near_null_address(str_address) -> bool:
+    address = int(str_address, 0)
+    is_64_bit = len(str_address) >= 18
+
+    if is_64_bit:
+        return -OFFSET_64_BIT <= address <= OFFSET_64_BIT
+
+    return -OFFSET_32_BIT <= address <= OFFSET_32_BIT
+
+
+def is_near_allocator_address(str_address) -> bool:
+    address = int(str_address, 0)
+    is_64_bit = len(str_address) >= 18
+
+    return any(
+        low <= address <= high
+        for low, high in (
+            ALLOCATOR_RANGES_64_BIT if is_64_bit else ALLOCATOR_RANGES_32_BIT
+        )
+    )
+
 
 class NoCrashReportFoundError(Exception):
     """Raised when no crash report is found with the required criteria."""
@@ -198,6 +239,46 @@ class SocorroInfoAnalyzer(socorro_util.SignatureStats):
     @property
     def top_build_id(self) -> int:
         return self.signature["facets"]["build_id"][0]["term"]
+
+    @cached_property
+    def num_near_null_crashes(self) -> int:
+        return sum(
+            address["count"]
+            for address in self.signature["facets"]["address"]
+            if is_near_null_address(address["term"])
+        )
+
+    @property
+    def is_near_null_crash(self) -> bool:
+        return self.num_near_null_crashes == self.num_crashes
+
+    @property
+    def is_potential_near_null_crash(self) -> bool:
+        return not self.is_near_null_crash and self.num_near_null_crashes > 0
+
+    @property
+    def is_near_null_related_crash(self) -> bool:
+        return self.is_near_null_crash or self.is_potential_near_null_crash
+
+    @cached_property
+    def num_near_allocator_crashes(self) -> int:
+        return sum(
+            address["count"]
+            for address in self.signature["facets"]["address"]
+            if is_near_allocator_address(address["term"])
+        )
+
+    @property
+    def is_near_allocator_crash(self) -> bool:
+        return self.num_near_allocator_crashes == self.num_crashes
+
+    @property
+    def is_potential_near_allocator_crash(self) -> bool:
+        return not self.is_near_allocator_crash and self.num_near_allocator_crashes > 0
+
+    @property
+    def is_near_allocator_related_crash(self) -> bool:
+        return self.is_near_allocator_crash or self.is_potential_near_allocator_crash
 
 
 class SignatureAnalyzer(SocorroInfoAnalyzer, ClouseauReportsAnalyzer):
