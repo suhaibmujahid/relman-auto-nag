@@ -733,6 +733,11 @@ class SignaturesDataFetcher:
 
     def fetch_clouseau_crash_reports(self) -> dict[str, list]:
         """Fetch the crash reports data from Crash Clouseau."""
+        logger.debug(
+            "Fetch from Clouseau: requesting reports for %d signatures",
+            len(self._signatures),
+        )
+
         signature_reports = clouseau.Reports.get_by_signatures(
             self._signatures,
             product=self._product,
@@ -740,7 +745,8 @@ class SignaturesDataFetcher:
         )
 
         logger.debug(
-            "Total of %d signatures received from Clouseau", len(signature_reports)
+            "Fetch from Clouseau: received reports for %d signatures",
+            len(signature_reports),
         )
 
         return signature_reports
@@ -785,6 +791,11 @@ class SignaturesDataFetcher:
             data["num_total_crashes"] = search_results["total"]
             data["signatures"] = search_results["facets"]["signature"]
 
+        logger.debug(
+            "Fetch from Socorro: requesting info for %d signatures",
+            len(self._signatures),
+        )
+
         data: dict = {}
         socorro.SuperSearchUnredacted(
             params=params,
@@ -793,7 +804,8 @@ class SignaturesDataFetcher:
         ).wait()
 
         logger.debug(
-            "Fetch info from Socorro for %d signatures", len(data["signatures"])
+            "Fetch from Socorro: received info for %d signatures",
+            len(data["signatures"]),
         )
 
         return data["signatures"], data["num_total_crashes"]
@@ -832,6 +844,10 @@ class SignaturesDataFetcher:
                     if signature in self._signatures:
                         data[signature].append(bug)
 
+        logger.debug(
+            "Fetch from Bugzilla: requesting bugs for %d signatures",
+            len(self._signatures),
+        )
         Bugzilla(
             queries=[
                 connection.Query(Bugzilla.API_URL, params, handler, signatures_bugs)
@@ -848,7 +864,7 @@ class SignaturesDataFetcher:
         ).wait()
 
         logger.debug(
-            "Total of %d signatures already have bugs filed", len(signatures_bugs)
+            "Fetch from Bugzilla: received bugs for %d signatures", len(signatures_bugs)
         )
 
         return signatures_bugs
@@ -869,7 +885,6 @@ class SignaturesDataFetcher:
         self._signatures.intersection_update(clouseau_reports.keys())
 
         signatures, num_total_crashes = self.fetch_socorro_info()
-        logger.debug("Total of %d signatures will be analyzed", len(signatures))
 
         return [
             SignatureAnalyzer(
