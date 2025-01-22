@@ -6,6 +6,7 @@ import argparse
 import http.client
 import os
 import re
+import urllib.error
 from os import path
 from typing import Optional
 from urllib.request import Request, urlopen
@@ -66,8 +67,13 @@ class CheckWikiPage:
     def get_rules_on_wiki_page(self) -> set:
         """Get the list of rules on the wiki page."""
         req = Request(self.wiki_page_url)
-        with urlopen(req) as resp:
-            wiki_page_content = resp.read().decode("utf-8")
+        try:
+            with urlopen(req) as resp:
+                wiki_page_content = resp.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            print(e.strerror)
+            print(e)
+            raise e
 
         pat = re.compile(rf"""['"]{re.escape(self.github_tree_address)}(.*)['"]""")
         rules = pat.findall(wiki_page_content)
