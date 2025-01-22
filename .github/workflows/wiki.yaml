@@ -2,8 +2,6 @@ name: Documentation on the wiki page
 
 on:
   push:
-    branches:
-      - "master"
 
 permissions:
   contents: read

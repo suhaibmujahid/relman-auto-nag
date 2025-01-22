@@ -3,11 +3,14 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import argparse
+import http.client
 import os
 import re
 from os import path
 from typing import Optional
 from urllib.request import Request, urlopen
+
+http.client.HTTPConnection.debuglevel = 1
 
 
 class CheckWikiPage:
