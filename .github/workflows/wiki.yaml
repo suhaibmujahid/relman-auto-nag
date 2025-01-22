@@ -17,5 +17,6 @@ jobs:
         with:
           python-version: 3.12
 
+      - run: curl https://wiki.mozilla.org/BugBot
       - name: Check rules on the wiki page
         run: python scripts/check_rules_on_wiki.py -ci
